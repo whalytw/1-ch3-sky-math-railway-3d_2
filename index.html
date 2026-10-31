@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant" data-skyrailway="1">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#0d1b2b">
+  <title>天空函數鐵道 · 三人數學礦車競速</title>
+  <style>
+    *{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;overscroll-behavior:none;background:#0d1b2b;color:#eef7ff;font-family:"Microsoft JhengHei","Noto Sans TC",sans-serif;user-select:none;-webkit-user-select:none}
+    #stage{position:relative;width:100vw;height:100dvh;background:#0d1b2b}#unity-canvas{width:100%;height:100%;display:block;touch-action:none;outline:none}
+    #loading{position:absolute;inset:0;display:grid;place-content:center;text-align:center;gap:20px;background:radial-gradient(ellipse at 50% 35%,#1a4158,#0d1b2b 70%);z-index:3}h1{margin:0;color:#ffcd65;font-size:clamp(28px,4vw,56px)}p{margin:0;color:#a7c2d4;font-size:20px}.track{width:min(520px,70vw);height:8px;background:#263e50;border-radius:4px;overflow:hidden}#progress{height:100%;width:0;background:linear-gradient(90deg,#ff8b36,#42d6dd,#b29aff);transition:width .15s}
+    #fullscreen{position:absolute;right:1vw;top:.45vh;width:11vw;min-width:112px;height:5.6vh;min-height:38px;border:0;background:#263e52;color:#eef7ff;font:clamp(14px,1.25vw,24px) "Microsoft JhengHei",sans-serif;touch-action:manipulation;cursor:pointer;z-index:2}#fullscreen:active{background:#47788d}
+    #notice{position:absolute;right:1vw;top:8vh;max-width:min(480px,90vw);padding:16px 22px;border:1px solid #ffcd65;background:#142b3e;color:#eef7ff;font-size:18px;z-index:4}
+  </style>
+</head>
+<body>
+<main id="stage">
+  <canvas id="unity-canvas" width="1920" height="1080" tabindex="0" aria-label="三人天空函數鐵道遊戲"></canvas>
+  <button id="fullscreen" type="button">全螢幕</button>
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <div id="loading"><h1>天空函數鐵道</h1><p>三人數學礦車競速</p><div class="track"><div id="progress"></div></div><p id="status">正在準備天空鐵道…</p></div>
+  <output id="verification" hidden>{"state":"Loading"}</output><output id="build-errors" hidden></output>
+</main>
+<script>
+  const canvas=document.getElementById('unity-canvas'),stage=document.getElementById('stage'),statusNode=document.getElementById('status'),errors=document.getElementById('build-errors');
+  function recordError(message){errors.textContent+=(errors.textContent?'\n':'')+String(message);}
+  window.addEventListener('error',e=>recordError(e.message));window.addEventListener('unhandledrejection',e=>recordError(e.reason));
+  const originalConsoleError=console.error;console.error=function(...args){recordError(args.join(' '));originalConsoleError.apply(console,args);};
+  for(const name of ['touchstart','touchmove','touchend','touchcancel'])canvas.addEventListener(name,e=>{if(e.cancelable)e.preventDefault();},{passive:false});
+  canvas.addEventListener('pointerdown',e=>{canvas.focus({preventScroll:true});if(e.pointerType==='touch'&&e.cancelable)e.preventDefault();},{passive:false});
+  function fullscreenDenied(error){const n=document.getElementById('notice');n.textContent='瀏覽器暫時無法進入全螢幕，請切換至遊戲分頁後再試。';n.hidden=false;console.warn('Fullscreen request declined: '+error.message);}
+  document.getElementById('fullscreen').addEventListener('click',()=>{try{const task=document.fullscreenElement?document.exitFullscreen():stage.requestFullscreen({navigationUI:'hide'});if(task)task.catch(fullscreenDenied);}catch(e){fullscreenDenied(e);}});
+  document.addEventListener('fullscreenchange',()=>{document.getElementById('fullscreen').textContent=document.fullscreenElement?'退出全螢幕':'全螢幕';document.getElementById('notice').hidden=true;});
+  // Explicit, local-only QA mode. Public Pages never sends performance data to a server.
+  const benchmarkMode=location.hostname==='localhost'&&new URLSearchParams(location.search).has('benchmark');
+  if(benchmarkMode){
+    new MutationObserver(()=>{const sample=JSON.parse(document.getElementById('verification').textContent);sample.clientVisible=!document.hidden;sample.clientFocused=document.hasFocus();fetch('/__telemetry',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(sample)}).catch(()=>{});}).observe(document.getElementById('verification'),{childList:true,characterData:true,subtree:true});
+  }
+  const buildUrl='Build';const config={
+    dataUrl:buildUrl+'/5ef05d5d7634f2a6adbf70f0fdd04d14.data.unityweb',frameworkUrl:buildUrl+'/43858797932caec4f1ba16edb791dd31.framework.js.unityweb',codeUrl:buildUrl+'/d768d08fa18b8f5682c987daa5a6cba2.wasm.unityweb',
+    streamingAssetsUrl:'StreamingAssets',companyName:'SkyRailway',productName:'天空函數鐵道',productVersion:'0.1.0',
+    matchWebGLToCanvasSize:!benchmarkMode,devicePixelRatio:benchmarkMode?1:Math.min(window.devicePixelRatio||1,1.25),autoSyncPersistentDataPath:true,
+    showBanner:(message,type)=>{if(type==='error'){recordError(message);statusNode.textContent='載入失敗，請重新整理後再試。';}else console.warn(message);}
+  };
+  if(benchmarkMode){canvas.width=1920;canvas.height=1080;stage.style.display='grid';stage.style.placeItems='center';canvas.style.width='min(100vw, 177.7778vh)';canvas.style.height='min(56.25vw, 100vh)';}
+  const loader=document.createElement('script');loader.src=buildUrl+'/32bde20a56d65884df01cc8243ede5bc.loader.js';
+  loader.onload=()=>createUnityInstance(canvas,config,p=>document.getElementById('progress').style.width=(p*100)+'%').then(instance=>{window.skyRailwayInstance=instance;document.getElementById('loading').style.display='none';canvas.focus({preventScroll:true});}).catch(e=>{recordError(e);statusNode.textContent='載入失敗，請重新整理後再試。';});
+  loader.onerror=()=>{recordError('loader download failed');statusNode.textContent='遊戲檔案無法載入，請確認網路後再試。';};document.body.appendChild(loader);
+</script>
+</body></html>
